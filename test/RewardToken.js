@@ -88,14 +88,14 @@ describe("RewardToken", function () {
     it("Should mint tokens to a given address", async function () {
       const { token, user } = await loadFixture(deployRewardTokenFixture);
       await token.toggleMinting();
-      const amount = ONE_TOKEN * 100n;
+      const amount = 100n; // whole units, contract applies decimals internally
       await token.mint(user.address, amount);
-      expect(await token.balanceOf(user.address)).to.equal(amount);
+      expect(await token.balanceOf(user.address)).to.equal(amount * ONE_TOKEN);
     });
 
     it("Should revert if minting is not allowed", async function () {
       const { token, user } = await loadFixture(deployRewardTokenFixture);
-      await expect(token.mint(user.address, ONE_TOKEN)).to.be.revertedWith(
+      await expect(token.mint(user.address, 1n)).to.be.revertedWith(
         "Minting is not allowed"
       );
     });
@@ -136,6 +136,21 @@ describe("RewardToken", function () {
       await expect(token.createMinter(minter1.address))
         .to.emit(token, "MinterAdded")
         .withArgs(minter1.address);
+    });
+
+    it("Should revert if address is zero", async function () {
+      const { token } = await loadFixture(deployRewardTokenFixture);
+      await expect(token.createMinter(ethers.ZeroAddress)).to.be.revertedWith(
+        "Invalid minter"
+      );
+    });
+
+    it("Should revert if address is already a minter", async function () {
+      const { token, minter1 } = await loadFixture(deployRewardTokenFixture);
+      await token.createMinter(minter1.address);
+      await expect(token.createMinter(minter1.address)).to.be.revertedWith(
+        "Already a minter"
+      );
     });
 
     it("Should revert if called by non-owner", async function () {
@@ -179,6 +194,13 @@ describe("RewardToken", function () {
       expect(await token.isMinter(minter2.address)).to.equal(true);
     });
 
+    it("Should revert if address is not a minter", async function () {
+      const { token, user } = await loadFixture(deployRewardTokenFixture);
+      await expect(token.removeMinter(user.address)).to.be.revertedWith(
+        "Not a minter"
+      );
+    });
+
     it("Should revert if called by non-owner", async function () {
       const { token, minter1, user } = await loadFixture(deployRewardTokenFixture);
       await token.createMinter(minter1.address);
@@ -193,9 +215,9 @@ describe("RewardToken", function () {
       const { token, minter1, user } = await loadFixture(deployRewardTokenFixture);
       await token.createMinter(minter1.address);
       await token.toggleMinting();
-      const amount = ONE_TOKEN * 50n;
+      const amount = 50n; // whole units, contract applies decimals internally
       await token.connect(minter1).mintForMinter(user.address, amount);
-      expect(await token.balanceOf(user.address)).to.equal(amount);
+      expect(await token.balanceOf(user.address)).to.equal(amount * ONE_TOKEN);
     });
 
     it("Should revert if caller is not a minter", async function () {
@@ -210,7 +232,7 @@ describe("RewardToken", function () {
       const { token, minter1, user } = await loadFixture(deployRewardTokenFixture);
       await token.createMinter(minter1.address);
       await expect(
-        token.connect(minter1).mintForMinter(user.address, ONE_TOKEN)
+        token.connect(minter1).mintForMinter(user.address, 1n)
       ).to.be.revertedWith("Minting is not allowed");
     });
 
@@ -291,6 +313,44 @@ describe("RewardToken", function () {
     });
   });
 
+  // ─── unLockMaxSupply ──────────────────────────────────────────────────────────
+
+  describe("unLockMaxSupply", function () {
+    it("Should unlock the max supply", async function () {
+      const { token } = await loadFixture(deployRewardTokenFixture);
+      await token.lockMaxSupply();
+      await token.unLockMaxSupply();
+      expect(await token.maxSupplyLocked()).to.equal(false);
+    });
+
+    it("Should emit MaxSupplyUnLocked event", async function () {
+      const { token } = await loadFixture(deployRewardTokenFixture);
+      await token.lockMaxSupply();
+      await expect(token.unLockMaxSupply()).to.emit(token, "MaxSupplyUnLocked");
+    });
+
+    it("Should allow setMaxSupply after unlocking", async function () {
+      const { token } = await loadFixture(deployRewardTokenFixture);
+      await token.lockMaxSupply();
+      await token.unLockMaxSupply();
+      await token.setMaxSupply(20000n);
+      expect(await token.maxSupply()).to.equal(20000n);
+    });
+
+    it("Should revert if locked forever", async function () {
+      const { token } = await loadFixture(deployRewardTokenFixture);
+      await token.lockMaxSupplyForEver();
+      await expect(token.unLockMaxSupply()).to.be.revertedWith(
+        "Max supply is locked forever"
+      );
+    });
+
+    it("Should revert if called by non-owner", async function () {
+      const { token, user } = await loadFixture(deployRewardTokenFixture);
+      await expect(token.connect(user).unLockMaxSupply()).to.be.reverted;
+    });
+  });
+
   // ─── lockMaxSupplyForEver ─────────────────────────────────────────────────────
 
   describe("lockMaxSupplyForEver", function () {
@@ -315,6 +375,13 @@ describe("RewardToken", function () {
       await expect(token.lockMaxSupply()).to.be.revertedWith(
         "Max supply is locked forever"
       );
+    });
+
+    it("Should emit MaxSupplyLockedForEver event", async function () {
+      const { token, owner } = await loadFixture(deployRewardTokenFixture);
+      await expect(token.lockMaxSupplyForEver())
+        .to.emit(token, "MaxSupplyLockedForEver")
+        .withArgs(owner.address);
     });
 
     it("Should revert if called by non-owner", async function () {

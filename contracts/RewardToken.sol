@@ -16,6 +16,7 @@ contract RewardToken is ERC20, Ownable{
     event MinterRemoved(address indexed minter);
     event MaxSupplyUpdated(uint oldMaxSupply, uint newMaxSupply);
     event MaxSupplyLocked();
+    event MaxSupplyUnLocked();
     event MintingToggled(bool allowed);
     event MaxSupplyLockedForEver(address indexed owner);
 
@@ -35,10 +36,12 @@ contract RewardToken is ERC20, Ownable{
     //mint only from the owner with check of max supply & check if minting is allowed
     function mint(address to, uint amount) external onlyOwner maxSupplyCheck(amount) checkMintingAllowed{
         
-        _mint(to, amount);
+        _mint(to, amount *10 **decimals());
     }
     //create a minter into the minters array and set the minter status to true in the mapping
     function createMinter(address minter) external onlyOwner{
+        require(minter != address(0), "Invalid minter");
+        require(!isMinter[minter], "Already a minter");
         minters.push(minter);
         isMinter[minter] = true;
         emit MinterAdded(minter);
@@ -46,6 +49,7 @@ contract RewardToken is ERC20, Ownable{
     }
     //remove a minter from the minters array and set the minter status to false in the mapping
     function removeMinter(address minter) external onlyOwner{
+        require(isMinter[minter], "Not a minter");
         isMinter[minter] = false;
         
         for (uint i = 0; i < minters.length; i++) {
@@ -59,19 +63,26 @@ contract RewardToken is ERC20, Ownable{
     }
     //mint tokens for a minter with check of max supply & check if minting is allowed
     function mintForMinter(address to, uint amount) external onlyMinter maxSupplyCheck(amount) checkMintingAllowed{
-        _mint(to, amount);
+        _mint(to, amount *10 **decimals());
     }
     function lockMaxSupply() external onlyOwner checkLockedMaxSupplyForEver{
         maxSupplyLocked = true;
         emit MaxSupplyLocked();
+    }
+       function unLockMaxSupply() external onlyOwner checkLockedMaxSupplyForEver{
+        maxSupplyLocked = false;
+        emit MaxSupplyUnLocked();
+
     }
 
 
     //set max supply, only if the max supply is not locked
      function setMaxSupply(uint newMaxSupply) external onlyOwner {
         require(!maxSupplyLocked, "Max supply is locked");
+        uint oldMaxSupply = maxSupply;
+    
         maxSupply = newMaxSupply;
-        emit MaxSupplyUpdated(maxSupply, newMaxSupply);
+        emit MaxSupplyUpdated(oldMaxSupply, newMaxSupply);
     }   
     //toggle minting, if minting is allowed, it will be disabled, and if it is disabled, it will be enabled
 
@@ -79,11 +90,15 @@ contract RewardToken is ERC20, Ownable{
         mintingAllowed = !mintingAllowed;
         emit MintingToggled(mintingAllowed);
         } 
+    
+    
 
     //lock max supply for ever, once this function is called, the max supply can never be changed again
     function lockMaxSupplyForEver() external onlyOwner{
         maxSupplyLocked = true;
         lockedMaxSupplyForEver = true;
+        emit MaxSupplyLockedForEver(msg.sender);
+        
     }
 
     /* modifiers */
@@ -94,7 +109,7 @@ contract RewardToken is ERC20, Ownable{
         // Note: The minter status is not revoked when the minter is removed, so we check the mapping instead of the array.
     }
     modifier maxSupplyCheck(uint amount) {
-        require(totalSupply()+ amount <= maxSupply *10 **decimals(), "Exceeds max supply");
+        require(totalSupply()+ amount *10 **decimals() <= maxSupply *10 **decimals(), "Exceeds max supply");
         _;
         // Note: We multiply maxSupply by 10^decimals to account for the token's decimal places.
     }
