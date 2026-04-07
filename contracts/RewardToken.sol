@@ -1,8 +1,9 @@
-//SPDX-License-Identifier:MIT
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-pragma solidity ^0.8.28;
+
 
 contract RewardToken is ERC20, Ownable{
     address[] public minters; 
@@ -36,7 +37,7 @@ contract RewardToken is ERC20, Ownable{
     //mint only from the owner with check of max supply & check if minting is allowed
     function mint(address to, uint amount) external onlyOwner maxSupplyCheck(amount) checkMintingAllowed{
         
-        _mint(to, amount *10 **decimals());
+        _mint(to, amount * (10 **decimals()));
     }
     //create a minter into the minters array and set the minter status to true in the mapping
     function createMinter(address minter) external onlyOwner{
@@ -63,13 +64,13 @@ contract RewardToken is ERC20, Ownable{
     }
     //mint tokens for a minter with check of max supply & check if minting is allowed
     function mintForMinter(address to, uint amount) external onlyMinter maxSupplyCheck(amount) checkMintingAllowed{
-        _mint(to, amount *10 **decimals());
+        _mint(to, amount * (10 **decimals()));
     }
     function lockMaxSupply() external onlyOwner checkLockedMaxSupplyForEver{
         maxSupplyLocked = true;
         emit MaxSupplyLocked();
     }
-       function unLockMaxSupply() external onlyOwner checkLockedMaxSupplyForEver{
+    function unlockMaxSupply() external onlyOwner checkLockedMaxSupplyForEver{
         maxSupplyLocked = false;
         emit MaxSupplyUnLocked();
 
@@ -106,10 +107,9 @@ contract RewardToken is ERC20, Ownable{
     modifier onlyMinter() {
         require(isMinter[msg.sender], "Not a minter");
         _;
-        // Note: The minter status is not revoked when the minter is removed, so we check the mapping instead of the array.
-    }
+        }    
     modifier maxSupplyCheck(uint amount) {
-        require(totalSupply()+ amount *10 **decimals() <= maxSupply *10 **decimals(), "Exceeds max supply");
+        require(totalSupply()+ amount * (10 **decimals()) <= maxSupply * (10 **decimals()), "Exceeds max supply");
         _;
         // Note: We multiply maxSupply by 10^decimals to account for the token's decimal places.
     }

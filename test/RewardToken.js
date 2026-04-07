@@ -313,26 +313,26 @@ describe("RewardToken", function () {
     });
   });
 
-  // ─── unLockMaxSupply ──────────────────────────────────────────────────────────
+  // ─── unlockMaxSupply ──────────────────────────────────────────────────────────
 
-  describe("unLockMaxSupply", function () {
+  describe("unlockMaxSupply", function () {
     it("Should unlock the max supply", async function () {
       const { token } = await loadFixture(deployRewardTokenFixture);
       await token.lockMaxSupply();
-      await token.unLockMaxSupply();
+      await token.unlockMaxSupply();
       expect(await token.maxSupplyLocked()).to.equal(false);
     });
 
     it("Should emit MaxSupplyUnLocked event", async function () {
       const { token } = await loadFixture(deployRewardTokenFixture);
       await token.lockMaxSupply();
-      await expect(token.unLockMaxSupply()).to.emit(token, "MaxSupplyUnLocked");
+      await expect(token.unlockMaxSupply()).to.emit(token, "MaxSupplyUnLocked");
     });
 
     it("Should allow setMaxSupply after unlocking", async function () {
       const { token } = await loadFixture(deployRewardTokenFixture);
       await token.lockMaxSupply();
-      await token.unLockMaxSupply();
+      await token.unlockMaxSupply();
       await token.setMaxSupply(20000n);
       expect(await token.maxSupply()).to.equal(20000n);
     });
@@ -340,14 +340,14 @@ describe("RewardToken", function () {
     it("Should revert if locked forever", async function () {
       const { token } = await loadFixture(deployRewardTokenFixture);
       await token.lockMaxSupplyForEver();
-      await expect(token.unLockMaxSupply()).to.be.revertedWith(
+      await expect(token.unlockMaxSupply()).to.be.revertedWith(
         "Max supply is locked forever"
       );
     });
 
     it("Should revert if called by non-owner", async function () {
       const { token, user } = await loadFixture(deployRewardTokenFixture);
-      await expect(token.connect(user).unLockMaxSupply()).to.be.reverted;
+      await expect(token.connect(user).unlockMaxSupply()).to.be.reverted;
     });
   });
 

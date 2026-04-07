@@ -5,3 +5,5 @@ coverage.json
 typechain-types
 cache
 artifacts
+data/merkle-tree.json
+package-lock 2.json
